@@ -75,4 +75,36 @@ double mvvm_density_unregularized(int p, double *theta, double *mu, double *kapp
  */
 long double mv_vonmises_lossFunction(int n,int p, double* kappa, double* lambda, long double *S, long double *C, long double *ro, double *d_kappa, double *d_lambda);
 
+/*****
+ * MODIFIED Optimized version. Computes simplified log likelihood and its derivatives
+ *
+ * Removes constant terms. Uses matrix multiplications. Reduce number of trigonometric opers.
+ * Reuses terms. Marginal mu is not longer needed, derivatives are simplified as well. 
+ * 
+ * Instead of PL we will name it "loss function"
+ *
+ * Lambda is taken as a full row-leading pxp matrix with 0's in the diagonal. But d_lambda is only
+ * computed for the upper triangle.
+ *
+ * If d_kappa or d_lambda are NULL, derivatives are not computed.
+ *
+ * To even speed up the process a little bit more, we make the following assumptions:
+ *
+ *  Mu is 0 for every j
+ *  (input) Theta_i_j = Sin( (real) Theta_i_j - (real)mu_j )
+ *
+ *
+ * @param [in] n
+ * @param [in] p
+ * @param [in] kappa
+ * @param [in] lambda
+ * @param [in] theta
+ * @param [out] ro
+ * @param [out] d_kappa
+ * @param [out] d_lambda
+ *
+ * @return loss function value
+ */
+long double mv_vonmises_lossFunction_mod(int n,int p, double* kappa, double* lambda, long double *S, long double *C, long double *ro, double *d_kappa, double *d_lambda);
+
 #endif

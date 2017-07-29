@@ -59,9 +59,11 @@ double mvvonmises_lbfgs_fit_l1(int p, double* mu, double* kappa, double* lambda,
     mv_theta_cos_sinTransform(n,p,samples,mu,S,C);
 
     /* Derivatives */
-    d_kappa = malloc(sizeof(double)*(p+(p*p)));
-    d_lambda = d_kappa + p;
-
+    //d_kappa = malloc(sizeof(double)*(p+(p*p)));
+    //d_lambda = d_kappa + p;
+    // CHANGED: no d_kappa needed, only p*p params now
+    d_lambda = malloc(sizeof(double)*(p*p));
+    d_kappa = malloc(sizeof(double)*(p));
 
     /* LBFGS variables */
     /* integer and logical types come from lbfgsb.h */
@@ -80,7 +82,9 @@ double mvvonmises_lbfgs_fit_l1(int p, double* mu, double* kappa, double* lambda,
     logical lsave[4];
 
     /* Dynamic parameters (Given, but we might have to cast)*/
-    integer nvar = ((p*p)-p)/2 + p;  // Number of variables
+    //integer nvar = ((p*p)-p)/2 + p;  // Number of variables
+    // CHANGED: different number of parameters, no kappa
+    integer nvar = ((p*p)-p)/2 ;  // Number of variables
 
     double  f = DBL_MAX;   // Eval value
     double *g = calloc(sizeof(double),nvar*4); // Gradient value
@@ -95,22 +99,29 @@ double mvvonmises_lbfgs_fit_l1(int p, double* mu, double* kappa, double* lambda,
 
     /* Copy parameters (this way so casting is done)*/
     for(i=0;i<nvar; i++){
-        l[i]   = lower[i] ;
-        u[i]   = upper[i];
-        nbd[i] = bounded[i];
+        //l[i]   = lower[i] ;
+        //u[i]   = upper[i];
+        //nbd[i] = bounded[i];
+        // CHANGED: no lower bounds needed, don't read first p that were for kappa
+        l[i]   = lower[i+p] ;
+        u[i]   = upper[i+p];
+        nbd[i] = bounded[i+p];
     }
 
 
     /* Copy initial values to X*/
     // Kappa values
-    for(i=0;i<p;i++){
-        x[i] = kappa[i];
-    }
+    // CHANGED: no kappa
+    //for(i=0;i<p;i++){
+    //    x[i] = kappa[i];
+    //}
 
     // Lambda values
     for(i=0, k=0; i < (p-1) ; i++) {
         for( j=(i+1) ; j < p ; j++, k++){
-            x[p+k] = lambda[ i*p + j];
+            //x[p+k] = lambda[ i*p + j];
+            // CHANGED: no kappa
+            x[k] = lambda[ i*p + j];
         }
     }
 
@@ -124,16 +135,19 @@ double mvvonmises_lbfgs_fit_l1(int p, double* mu, double* kappa, double* lambda,
         if( IS_FG(*task) ){
 
             // Copy kappa
-            memcpy(kappa,x,sizeof(double)*p);
+            // CHANGED: no kappa
+            //memcpy(kappa,x,sizeof(double)*p);
 
             // Copy lambda
-            matrixUpperToFull(p,x+p,lambda);
+            // CHANGED: no accounting for kappa in pointer second arg
+            //matrixUpperToFull(p,x+p,lambda);
+            matrixUpperToFull(p,x,lambda);
 
             // Call loss function with current x
-            f = mv_vonmises_lossFunction(n,p,kappa,lambda,S,C,ro,d_kappa,d_lambda);
+            f = mv_vonmises_lossFunction_mod(n,p,kappa,lambda,S,C,ro,d_kappa,d_lambda);
 
-            // Kappa partials
-            memcpy(g,d_kappa,sizeof(double)*p);
+            // Kappa partials - just lambda instead, so don't need this line?
+            //memcpy(g,d_lambda,sizeof(double)*p);
 
             // Apply penalization
             if( (penparam > 0) ){
@@ -148,9 +162,10 @@ double mvvonmises_lbfgs_fit_l1(int p, double* mu, double* kappa, double* lambda,
                  }
             
                  // We also need to include kappa
-                 for (i=0; i<p; i++){
-                        l1pen += kappa[ i ]++ ;
-                 }
+                 // CHANGED: no kappa
+                 //for (i=0; i<p; i++){
+                 //       l1pen += kappa[ i ]++ ;
+                 //}
                  
                  // Add norm to F
                  f += penparam * l1pen;
@@ -166,16 +181,18 @@ double mvvonmises_lbfgs_fit_l1(int p, double* mu, double* kappa, double* lambda,
                     }
     
                     // Modify kappa partials
-                    for (i=0; i<p; i++){
-                            d_kappa[i] += penparam ;
-                     }
+                    // CHANGED: no kappa
+                    //for (i=0; i<p; i++){
+                    //        d_kappa[i] += penparam ;
+                    // }
                 }
             }
 
             // Lambda partials (to vector)
             for(i=0, k=0; i < (p-1) ; i++) {
                 for( j=(i+1) ; j < p ; j++, k++){
-                    g[p+k] = d_lambda[ i*p + j];
+                    //g[p+k] = d_lambda[ i*p + j];
+                    g[k] = d_lambda[ i*p + j];
                 }
             }
         }
@@ -198,10 +215,12 @@ double mvvonmises_lbfgs_fit_l1(int p, double* mu, double* kappa, double* lambda,
 
 
     /* Copy back x */
-    for(i=0;i<p;i++) kappa[i]=x[i];
-    matrixUpperToFull(p,x+p,lambda);
+    //CHANGED: no kappa changes, fix pointer second arg of matrixUpperToFull
+    //for(i=0;i<p;i++) kappa[i]=x[i];
+    matrixUpperToFull(p,x,lambda);
 
     /** FreE*/
+    // CHANGED: no d_kappa
     free(S); free(d_kappa); free(g);
     free(wa); free(iwa); free(nbd);
 

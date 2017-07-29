@@ -37,7 +37,7 @@ mvVonMises <- function(mu, kappa, lambda, ...){
   
   else stop("Mu must be circular or numeric. see circular::as.circular() ")
   
-  if ( !is.numeric(kappa) || any(kappa < 0) ) stop("Kappa should be a positive numeric vector")
+  #if ( !is.numeric(kappa) || any(kappa < 0) ) stop("Kappa should be a positive numeric vector")
   
   if ( !is.numeric(lambda) || !is.matrix(lambda) ) stop("Lambda should be a numeric matrix")
   
